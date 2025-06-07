@@ -20,7 +20,15 @@ parsed_log_path = "parsed_posts.json"
 parsed_ids = {}
 if os.path.exists(parsed_log_path):
     with open(parsed_log_path, "r", encoding="utf-8") as f:
-        parsed_ids = json.load(f)
+        try:
+            parsed_data = json.load(f)
+            # Если это старый формат (просто список), оборачиваем в словарь
+            if isinstance(parsed_data, list):
+                parsed_ids[channel_username] = parsed_data
+            elif isinstance(parsed_data, dict):
+                parsed_ids = parsed_data
+        except json.JSONDecodeError:
+            print("⚠️ Файл parsed_posts.json поврежден или пуст, создаем заново.")
         
 channel_parsed_ids = set(parsed_ids.get(channel_username, []))        
 
@@ -36,7 +44,8 @@ os.makedirs(base_files_path, exist_ok=True)
 with TelegramClient('session_name', api_id, api_hash) as client:
     channel = client.get_entity(channel_username)
     offset_id = 0
-    limit = 200
+    limit = 100
+    total_count_limit = 0  # 0 = без ограничения
     all_new_ids = []
 
     while True:
